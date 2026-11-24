@@ -1,24 +1,33 @@
-# Say What Actually Broke — R2 entry
-# Writes one line of software error copy to /output/entry.txt.
+"""Say What Actually Broke, round 2.
 
-import os
+One line of error copy, written to /output/entry.txt. The sealed gate
+wants UTF-8 text of 1 to 200 characters that is not only whitespace.
+"""
+
+from pathlib import Path
+
+OUT = Path("/output/entry.txt")
 
 LINE = "Your download stopped at 99%. Try again — it restarts from 0%, because remembering where it stopped was too much to ask."
 
 
+def good(line):
+    """True when the line fits the gate: 1-200 chars, not blank."""
+    return 1 <= len(line) <= 200 and line.strip() != ""
+
+
 def main():
-    # Gate self-check: 1-200 chars, not only whitespace (RULES.txt).
-    assert 1 <= len(LINE) <= 200, len(LINE)
-    assert LINE.strip(), "line is only whitespace"
-    os.makedirs("/output", exist_ok=True)
-    with open("/output/entry.txt", "w", encoding="utf-8") as f:
-        f.write(LINE)
-    # Byte-verify what was actually written, immediately.
-    with open("/output/entry.txt", "r", encoding="utf-8") as f:
-        written = f.read()
-    assert written == LINE, "entry.txt does not match LINE"
-    assert not written.endswith("\n"), "no trailing newline"
-    print(f"entry.txt: {len(written)} chars, {len(written.encode('utf-8'))} bytes")
+    if not good(LINE):
+        raise SystemExit("line fails the 1-200 character gate")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(LINE, encoding="utf-8")
+    # Read it back and confirm the disk holds exactly the line we meant.
+    back = OUT.read_text(encoding="utf-8")
+    if back != LINE:
+        raise SystemExit("entry.txt does not match the line")
+    if back.endswith("\n"):
+        raise SystemExit("entry.txt must not end with a newline")
+    print("entry.txt: %d chars, %d bytes" % (len(back), len(back.encode("utf-8"))))
 
 
 if __name__ == "__main__":
